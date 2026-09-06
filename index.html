@@ -44,8 +44,7 @@
     line-height:1.5;
   }
   h1,h2,h3,.serif{ font-family:'Fraunces', serif; font-weight:500; letter-spacing:-0.01em; }
-  button{ font-family:inherit; }
-  input,select{ font-family:inherit; }
+  button, input, select, textarea{ font-family:inherit; }
   ::selection{ background:var(--mint-500); color:#06231E; }
 
   .wrap{ max-width:1080px; margin:0 auto; padding:28px 20px 80px; }
@@ -80,11 +79,11 @@
   .auth-screen p.hint{ margin:0 0 22px; color:var(--ink-muted); font-size:14px; }
   .field{ margin-bottom:14px; }
   .field label{ display:block; font-size:12.5px; font-weight:700; color:var(--ink-muted); margin-bottom:5px; }
-  .field input, .field select{
+  .field input, .field select, .field textarea{
     width:100%; padding:11px 12px; border-radius:var(--radius-sm);
     border:1.5px solid var(--border-strong); background:#fff; color:var(--ink); font-size:14.5px;
   }
-  .field input:focus, .field select:focus{ outline:2px solid var(--teal-600); outline-offset:1px; border-color:var(--teal-600); }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:2px solid var(--teal-600); outline-offset:1px; border-color:var(--teal-600); }
   .btn-primary{
     width:100%; padding:12px; border:none; border-radius:var(--radius-sm);
     background:var(--teal-700); color:#fff; font-weight:700; font-size:14.5px; cursor:pointer;
@@ -102,7 +101,7 @@
   .btn-google:hover{ background:var(--surface-alt); }
   .auth-toggle{ text-align:center; margin-top:16px; font-size:13.5px; color:var(--ink-muted); }
   .auth-toggle button{ background:none; border:none; color:var(--teal-700); font-weight:700; cursor:pointer; padding:0; font-size:13.5px; }
-  .auth-error{ background:#FDECE7; color:var(--danger); border:1px solid #F3C6BA; padding:9px 12px; border-radius:var(--radius-sm); font-size:13px; margin-bottom:14px; }
+  .auth-error{ background:#FDECE7; color:var(--danger); border:1px solid #F3C6BA; padding:99px 12px; border-radius:var(--radius-sm); font-size:13px; margin-bottom:14px; }
 
   /* ---------- period switch ---------- */
   .period-row{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:22px; }
@@ -119,9 +118,7 @@
   }
   .nav-date button:hover{ background:var(--surface-alt); }
   .nav-date .cur-label{ font-weight:800; color:var(--teal-900); font-size:15px; min-width:150px; text-align:center; cursor:pointer; position:relative; }
-  .nav-date input[type="date"], .nav-date input[type="month"], .nav-date select{
-    position:absolute; opacity:0; inset:0; width:100%; height:100%; cursor:pointer;
-  }
+  .nav-date input[type="date"]{ position:absolute; opacity:0; inset:0; width:100%; height:100%; cursor:pointer; }
   .nav-date .cur-label{ display:inline-block; padding:6px 10px; border-radius:var(--radius-sm); background:var(--surface); border:1px solid var(--border); }
 
   /* ---------- layout ---------- */
@@ -146,7 +143,27 @@
   .type-toggle button.active[data-type="expense"]{ background:#FCECE3; border-color:var(--expense); color:var(--expense); }
   .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   .form-grid .full{ grid-column:1/-1; }
-  #addBtn{ margin-top:14px; }
+  
+  /* custom date picker UI */
+  .date-picker-wrap{ position:relative; }
+  .date-picker-wrap input[type="date"]{
+    width:100%; padding:10px 12px; font-weight:600; color:var(--teal-900);
+    background:var(--surface-alt); border:1.5px solid var(--border-strong);
+  }
+
+  /* category manager UI */
+  .cat-select-group{ display:flex; gap:6px; }
+  .cat-select-group select{ flex:1; }
+  .btn-icon{
+    padding:0 12px; border:1.5px solid var(--border-strong); background:var(--surface-alt);
+    border-radius:var(--radius-sm); cursor:pointer; color:var(--teal-900); font-weight:800; font-size:16px;
+  }
+  .btn-icon:hover{ background:var(--border); }
+  .btn-icon.danger{ color:var(--danger); }
+
+  /* search & filter UI */
+  .search-box{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:14px; }
+  @media (max-width:520px){ .search-box{ grid-template-columns: 1fr; } }
 
   /* transaction list */
   .tx-list{ list-style:none; margin:0; padding:0; max-height:420px; overflow:auto; }
@@ -182,13 +199,16 @@
 
   .chart-wrap{ position:relative; height:230px; }
 
-  /* insight note */
+  /* insight & profile note */
   .insight-panel{ background:var(--surface-alt); border:1.5px dashed var(--border-strong); }
   .insight-panel h2{ display:flex; align-items:center; gap:8px; }
   .insight-list{ margin:0; padding-left:18px; }
   .insight-list li{ margin-bottom:10px; font-size:14px; color:var(--ink); }
   .insight-list li:last-child{ margin-bottom:0; }
-  .insight-empty{ color:var(--ink-faint); font-size:13.5px; }
+
+  .profile-box{ background:var(--surface); border:1px solid var(--border); padding:12px; border-radius:var(--radius-sm); margin-bottom:14px; }
+  .profile-box textarea{ height:65px; resize:none; font-size:13px; margin-top:4px; }
+  .profile-box button{ margin-top:6px; font-size:12px; padding:6px 12px; width:auto; }
 
   footer.foot{ text-align:center; margin-top:40px; color:var(--ink-faint); font-size:12.5px; }
 </style>
@@ -208,7 +228,6 @@
     </div>
   </header>
 
-  <!-- ============ AUTH SCREEN ============ -->
   <section id="authScreen" class="auth-screen">
     <h2 id="authTitle">Masuk</h2>
     <p class="hint" id="authHint">Masuk dengan akun yang sama di HP, laptop, atau komputer manapun untuk melihat catatan yang sama.</p>
@@ -233,7 +252,6 @@
     </div>
   </section>
 
-  <!-- ============ APP ============ -->
   <div id="appScreen" style="display:none;">
 
     <div class="period-row">
@@ -261,13 +279,17 @@
             <button type="button" data-type="expense">Pengeluaran</button>
           </div>
           <div class="form-grid">
-            <div class="field full">
-              <label for="txDate">Tanggal</label>
+            <div class="field full date-picker-wrap">
+              <label for="txDate">Tanggal Transaksi</label>
               <input type="date" id="txDate" />
             </div>
             <div class="field">
               <label for="txCategory">Kategori</label>
-              <select id="txCategory"></select>
+              <div class="cat-select-group">
+                <select id="txCategory"></select>
+                <button type="button" class="btn-icon" id="addCatBtn" title="Tambah Kategori Baru">+</button>
+                <button type="button" class="btn-icon danger" id="delCatBtn" title="Hapus Kategori Terpilih">✕</button>
+              </div>
             </div>
             <div class="field">
               <label for="txAmount">Jumlah (Rp)</label>
@@ -275,7 +297,7 @@
             </div>
             <div class="field full">
               <label for="txNote">Catatan (opsional)</label>
-              <input type="text" id="txNote" placeholder="mis. bakso di kantin siang" />
+              <input type="text" id="txNote" placeholder="mis. jajan es teh & siomay" />
             </div>
           </div>
           <button class="btn-primary" id="addBtn">Simpan transaksi</button>
@@ -283,6 +305,14 @@
 
         <div class="panel">
           <h2 id="listTitle">Transaksi hari ini</h2>
+          
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Cari catatan (mis. beasiswa)..." />
+            <select id="filterCategory">
+              <option value="">Semua Kategori</option>
+            </select>
+          </div>
+
           <ul class="tx-list" id="txList"></ul>
         </div>
 
@@ -319,7 +349,14 @@
         </div>
 
         <div class="panel insight-panel">
-          <h2>Analisis cerdas</h2>
+          <h2>Analisis & Nasihat Cerdas</h2>
+          
+          <div class="profile-box">
+            <label for="userProfileNote" style="font-size:12px; font-weight:700; color:var(--teal-900);">Catatan Profil Kamu (Context AI):</label>
+            <textarea id="userProfileNote" placeholder="Contoh: Saya pelajar, dapat uang saku Rp30.000/hari..."></textarea>
+            <button class="btn-primary" id="saveProfileBtn">Simpan Profil AI</button>
+          </div>
+
           <ul class="insight-list" id="insightList"></ul>
         </div>
 
@@ -330,7 +367,6 @@
   <footer class="foot">Keuangan Cendikia — data tersimpan di akun cloud milikmu sendiri.</footer>
 </div>
 
-<!-- ===================== FIREBASE ===================== -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -341,12 +377,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot,
-  serverTimestamp, query, orderBy
+  setDoc, getDoc, serverTimestamp, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* -----------------------------------------------------------
    GANTI bagian ini dengan config dari project Firebase kamu.
-   Lihat README.md langkah 1-4 untuk cara mendapatkannya.
 ------------------------------------------------------------ */
 const firebaseConfig = {
   apiKey: "AIzaSyAdEiDrzdQY8g_YZBauIsPcTsx7-VRbOY4",
@@ -362,24 +397,22 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* Sesi login disimpan di penyimpanan browser (bukan hanya selama tab
-   terbuka). Artinya: sekali login di satu perangkat, tidak akan diminta
-   login lagi di perangkat itu sampai kamu klik "Keluar". Perangkat lain
-   yang belum pernah login akan tetap diminta login sekali. */
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 /* ===================== STATE ===================== */
 let currentUser = null;
-let allTx = [];              // semua transaksi milik user, realtime
+let allTx = [];
 let unsubscribeTx = null;
-let period = "day";          // day | month | year
-let refDate = new Date();    // tanggal acuan untuk period yang dipilih
-let mode = "login";          // login | register
+let period = "day";
+let refDate = new Date();
+let mode = "login";
 
-const CATEGORY = {
-  income:  ["Gaji", "Bonus", "Hadiah", "Usaha Sampingan", "Lainnya"],
+const DEFAULT_CATEGORIES = {
+  income: ["Gaji", "Bonus", "Hadiah", "Usaha Sampingan", "Lainnya"],
   expense: ["Makanan & Minuman", "Transportasi", "Belanja", "Tagihan", "Kesehatan", "Hiburan", "Pendidikan", "Lainnya"]
 };
+let userCategories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+let userProfile = "";
 
 /* ===================== HELPERS ===================== */
 const fmtRp = n => "Rp" + Math.round(n).toLocaleString("id-ID");
@@ -449,7 +482,7 @@ el("googleBtn").addEventListener("click", async () => {
 
 el("logoutBtn").addEventListener("click", () => signOut(auth));
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   currentUser = user;
   if (unsubscribeTx) { unsubscribeTx(); unsubscribeTx = null; }
   if (user) {
@@ -457,6 +490,8 @@ onAuthStateChanged(auth, (user) => {
     el("appScreen").style.display = "block";
     el("authChip").style.display = "flex";
     el("userEmailLabel").textContent = user.email;
+    
+    await loadUserSettings(user.uid);
     listenToTransactions(user.uid);
   } else {
     el("authScreen").style.display = "block";
@@ -466,7 +501,35 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-/* ===================== FIRESTORE SYNC ===================== */
+/* ===================== FIRESTORE SYNC & USER SETTINGS ===================== */
+async function loadUserSettings(uid){
+  try {
+    const docRef = doc(db, "users", uid, "settings", "profile");
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (data.categories) userCategories = data.categories;
+      if (data.profileNote) {
+        userProfile = data.profileNote;
+        el("userProfileNote").value = userProfile;
+      }
+    } else {
+      userCategories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+    }
+  } catch(e) { console.error("Error loading settings:", e); }
+  updateCategoryDropdowns();
+}
+
+async function saveUserSettings(){
+  if (!currentUser) return;
+  try {
+    await setDoc(doc(db, "users", currentUser.uid, "settings", "profile"), {
+      categories: userCategories,
+      profileNote: userProfile
+    });
+  } catch(e) { console.error("Error saving settings:", e); }
+}
+
 function listenToTransactions(uid){
   const q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
   unsubscribeTx = onSnapshot(q, (snap) => {
@@ -505,25 +568,72 @@ async function deleteTx(id){
   await deleteDoc(doc(db, "users", currentUser.uid, "transactions", id));
 }
 
-/* ===================== FORM SETUP ===================== */
-function fillCategoryOptions(type){
+/* ===================== CATEGORY MANAGEMENT ===================== */
+function updateCategoryDropdowns(){
+  const type = document.querySelector(".type-toggle button.active").dataset.type;
   const sel = el("txCategory");
+  const filterSel = el("filterCategory");
+  const currentFilter = filterSel.value;
+
   sel.innerHTML = "";
-  CATEGORY[type].forEach(c => {
+  userCategories[type].forEach(c => {
     const opt = document.createElement("option");
     opt.value = c; opt.textContent = c;
     sel.appendChild(opt);
   });
+
+  // Update filter list (gabungan semua)
+  filterSel.innerHTML = `<option value="">Semua Kategori</option>`;
+  const allCats = Array.from(new Set([...userCategories.income, ...userCategories.expense]));
+  allCats.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c; opt.textContent = c;
+    filterSel.appendChild(opt);
+  });
+  filterSel.value = currentFilter;
 }
+
+el("addCatBtn").addEventListener("click", async () => {
+  const type = document.querySelector(".type-toggle button.active").dataset.type;
+  const newCat = prompt(`Masukkan nama kategori ${type === 'income' ? 'Pemasukan' : 'Pengeluaran'} baru:`);
+  if (newCat && newCat.trim() !== "") {
+    const cleanCat = newCat.trim();
+    if (!userCategories[type].includes(cleanCat)) {
+      userCategories[type].push(cleanCat);
+      await saveUserSettings();
+      updateCategoryDropdowns();
+    }
+  }
+});
+
+el("delCatBtn").addEventListener("click", async () => {
+  const type = document.querySelector(".type-toggle button.active").dataset.type;
+  const selectedCat = el("txCategory").value;
+  if (!selectedCat) return;
+  if (confirm(`Hapus kategori "${selectedCat}"?`)) {
+    userCategories[type] = userCategories[type].filter(c => c !== selectedCat);
+    await saveUserSettings();
+    updateCategoryDropdowns();
+  }
+});
+
 document.querySelectorAll(".type-toggle button").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".type-toggle button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    fillCategoryOptions(btn.dataset.type);
+    updateCategoryDropdowns();
   });
 });
-fillCategoryOptions("income");
+
 el("txDate").value = toISODate(new Date());
+
+/* ===================== PROFIL AI SAVE ===================== */
+el("saveProfileBtn").addEventListener("click", async () => {
+  userProfile = el("userProfileNote").value.trim();
+  await saveUserSettings();
+  alert("Profil AI berhasil diperbarui!");
+  render();
+});
 
 /* ===================== PERIOD SWITCH ===================== */
 document.querySelectorAll("#periodSwitch button").forEach(btn => {
@@ -552,6 +662,10 @@ el("curLabel").addEventListener("click", () => {
   try { el("dayPicker").showPicker(); } catch(_) {}
 });
 
+/* SEARCH & FILTER LISTENERS */
+el("searchInput").addEventListener("input", render);
+el("filterCategory").addEventListener("change", render);
+
 /* ===================== FILTERING ===================== */
 function txInPeriod(tx){
   const [y,m,d] = tx.date.split("-").map(Number);
@@ -562,18 +676,6 @@ function txInPeriod(tx){
   } else {
     return y === refDate.getFullYear();
   }
-}
-function previousPeriodTx(){
-  const prev = new Date(refDate);
-  if (period === "day") prev.setDate(prev.getDate()-1);
-  else if (period === "month") prev.setMonth(prev.getMonth()-1);
-  else prev.setFullYear(prev.getFullYear()-1);
-  return allTx.filter(tx => {
-    const [y,m,d] = tx.date.split("-").map(Number);
-    if (period === "day") return y===prev.getFullYear() && m===prev.getMonth()+1 && d===prev.getDate();
-    if (period === "month") return y===prev.getFullYear() && m===prev.getMonth()+1;
-    return y===prev.getFullYear();
-  });
 }
 
 function periodLabel(){
@@ -662,60 +764,40 @@ function renderTrendChart(){
   });
 }
 
-/* ===================== INSIGHT ENGINE (rule-based) =====================
-   Analisis ini dihitung langsung di browser dari data kamu sendiri —
-   tanpa mengirim data ke server pihak ketiga mana pun.
-   Lihat README bagian "Analisis AI" jika ingin menyambungkannya ke
-   model AI sungguhan (opsional, butuh API key sendiri). */
-function buildInsights(currentTx, prevTx){
+/* ===================== INSIGHT ENGINE (Context & Rule-Based) ===================== */
+function buildInsights(currentTx){
   const insights = [];
   const income = currentTx.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
   const expense = currentTx.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
-  const prevIncome = prevTx.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
-  const prevExpense = prevTx.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
+
+  // Analisis Konteks Profil Pengguna
+  if (userProfile !== "") {
+    insights.push(`💡 <b>Nasihat Berdasarkan Profil:</b> "${userProfile}"`);
+    
+    // Logika sederhana deteksi kata kunci profil
+    const pLower = userProfile.toLowerCase();
+    if (pLower.includes("pelajar") || pLower.includes("siswa") || pLower.includes("mahasiswa")) {
+      if (expense > 25000 && period === "day") {
+        insights.push("⚠️ Pengeluaran hari ini cukup tinggi untuk skala pelajar/mahasiswa. Usahakan prioritaskan kebutuhan utama.");
+      } else {
+        insights.push("Pola jajanmu cukup aman. Selalu alokasikan minimal 10%-20% uang saku untuk disimpan/ditabung.");
+      }
+    }
+  } else {
+    insights.push("💡 <i>Isi 'Catatan Profil Kamu' di atas agar AI dapat memberikan nasihat finansial yang lebih personal!</i>");
+  }
 
   if (currentTx.length === 0) {
-    insights.push("Belum ada transaksi di periode ini. Yuk catat jajan atau pemasukan pertamamu.");
+    insights.push("Belum ada catatan di periode ini.");
     return insights;
   }
 
   if (expense > income) {
-    insights.push(`Pengeluaran (${fmtRp(expense)}) lebih besar dari pemasukan (${fmtRp(income)}) pada periode ini. Selisihnya ${fmtRp(expense-income)}.`);
+    insights.push(`🔴 <b>Defisit:</b> Pengeluaran (${fmtRp(expense)}) melebihi pemasukan (${fmtRp(income)}). Coba batasi jajan yang opsional.`);
   } else if (income > 0) {
     const sisa = income - expense;
     const pct = Math.round((sisa/income)*100);
-    insights.push(`Kamu menyisakan ${fmtRp(sisa)} (${pct}% dari pemasukan) pada periode ini.`);
-  }
-
-  const byCat = {};
-  currentTx.filter(t=>t.type==="expense").forEach(t => { byCat[t.category] = (byCat[t.category]||0)+t.amount; });
-  const catEntries = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
-  if (catEntries.length > 0 && expense > 0) {
-    const [topCat, topVal] = catEntries[0];
-    const pct = Math.round((topVal/expense)*100);
-    insights.push(`Pengeluaran terbesar ada di kategori "${topCat}", sekitar ${pct}% dari total pengeluaran (${fmtRp(topVal)}).`);
-  }
-
-  if (prevExpense > 0) {
-    const diff = expense - prevExpense;
-    const pct = Math.round((Math.abs(diff)/prevExpense)*100);
-    const periodWord = period === "day" ? "hari sebelumnya" : period === "month" ? "bulan sebelumnya" : "tahun sebelumnya";
-    if (diff > 0) insights.push(`Pengeluaran naik ${pct}% dibanding ${periodWord}.`);
-    else if (diff < 0) insights.push(`Pengeluaran turun ${pct}% dibanding ${periodWord}, kerja bagus.`);
-  }
-
-  if (period === "month") {
-    const daysPassed = new Set(currentTx.map(t=>t.date)).size;
-    if (daysPassed > 0) insights.push(`Rata-rata pengeluaran per hari yang tercatat adalah ${fmtRp(expense/daysPassed)}.`);
-  }
-  if (period === "year") {
-    const monthsWithData = new Set(currentTx.map(t=>t.date.slice(0,7))).size;
-    if (monthsWithData > 0) insights.push(`Rata-rata pengeluaran per bulan yang tercatat adalah ${fmtRp(expense/monthsWithData)}.`);
-  }
-
-  if (catEntries.length > 1) {
-    const [secondCat] = catEntries[1];
-    insights.push(`Kategori terbesar kedua: "${secondCat}". Coba tetapkan batas mingguan untuk dua kategori teratas ini kalau ingin lebih hemat.`);
+    insights.push(`🟢 <b>Surplus:</b> Berhasil menyisakan ${fmtRp(sisa)} (${pct}% dari pemasukan). Ideal untuk tabungan/dana darurat!`);
   }
 
   return insights;
@@ -728,21 +810,40 @@ function render(){
   el("listTitle").textContent = "Transaksi " + titleWord;
   el("summaryTitle").textContent = "Ringkasan " + titleWord;
 
-  const currentTx = allTx.filter(txInPeriod).sort((a,b) => (a.date < b.date ? 1 : -1));
-  const prevTx = previousPeriodTx();
+  // Filterberdasarkan periode
+  let filteredTx = allTx.filter(txInPeriod);
 
-  const income = currentTx.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
-  const expense = currentTx.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
+  // Filter berdasarkan Pencarian & Kategori
+  const searchKey = el("searchInput").value.toLowerCase().trim();
+  const selectedCatFilter = el("filterCategory").value;
+
+  if (searchKey !== "") {
+    filteredTx = filteredTx.filter(t => 
+      (t.note && t.note.toLowerCase().includes(searchKey)) ||
+      (t.category && t.category.toLowerCase().includes(searchKey))
+    );
+  }
+
+  if (selectedCatFilter !== "") {
+    filteredTx = filteredTx.filter(t => t.category === selectedCatFilter);
+  }
+
+  filteredTx.sort((a,b) => (a.date < b.date ? 1 : -1));
+
+  // Hitung Ringkasan Statistik
+  const income = filteredTx.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
+  const expense = filteredTx.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
   el("sumIncome").textContent = fmtRp(income);
   el("sumExpense").textContent = fmtRp(expense);
   el("sumBalance").textContent = fmtRp(income-expense);
 
+  // Render Daftar Transaksi
   const list = el("txList");
   list.innerHTML = "";
-  if (currentTx.length === 0) {
-    list.innerHTML = `<li class="empty-state">Belum ada transaksi di periode ini.</li>`;
+  if (filteredTx.length === 0) {
+    list.innerHTML = `<li class="empty-state">Tidak ada transaksi ditemukan.</li>`;
   } else {
-    currentTx.forEach(t => {
+    filteredTx.forEach(t => {
       const li = document.createElement("li");
       li.className = "tx-item";
       const dateShown = period === "day" ? "" : `<div class="tx-date">${t.date}</div>`;
@@ -761,14 +862,15 @@ function render(){
     list.querySelectorAll(".tx-del").forEach(btn => btn.addEventListener("click", () => deleteTx(btn.dataset.id)));
   }
 
-  renderCategoryChart(currentTx);
+  renderCategoryChart(filteredTx);
   renderTrendChart();
 
+  // Render Analisis Nasihat AI
   const insightList = el("insightList");
   insightList.innerHTML = "";
-  buildInsights(currentTx, prevTx).forEach(text => {
+  buildInsights(filteredTx).forEach(htmlContent => {
     const li = document.createElement("li");
-    li.textContent = text;
+    li.innerHTML = htmlContent;
     insightList.appendChild(li);
   });
 }
