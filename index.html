@@ -148,6 +148,45 @@
   .form-grid .full{ grid-column:1/-1; }
   #addBtn{ margin-top:14px; }
 
+  /* category management */
+  .cat-manage{ margin-top:14px; padding-top:14px; border-top:1px dashed var(--border-strong); }
+  .cat-manage summary{ cursor:pointer; font-weight:700; font-size:13px; color:var(--teal-700); list-style:none; }
+  .cat-manage summary::-webkit-details-marker{ display:none; }
+  .cat-manage summary::before{ content:"🏷️ "; }
+  .cat-manage-body{ margin-top:12px; }
+  .cat-manage-body p.hint{ font-size:12px; color:var(--ink-faint); margin:0 0 10px; }
+  .cat-add-row{ display:flex; gap:8px; margin-bottom:12px; }
+  .cat-add-row input{ flex:1; padding:9px 11px; border-radius:var(--radius-sm); border:1.5px solid var(--border-strong); font-size:13.5px; }
+  .cat-add-row button{ border:none; background:var(--teal-700); color:#fff; font-weight:700; border-radius:var(--radius-sm); padding:0 16px; cursor:pointer; font-size:13px; }
+  .cat-add-row button:hover{ background:var(--teal-900); }
+  .cat-chip-group{ display:flex; flex-wrap:wrap; gap:8px; }
+  .cat-chip{
+    display:inline-flex; align-items:center; gap:6px; padding:5px 6px 5px 12px;
+    border-radius:999px; background:var(--surface-alt); border:1px solid var(--border);
+    font-size:12.5px; font-weight:600; color:var(--ink);
+  }
+  .cat-chip button{ border:none; background:none; color:var(--ink-faint); cursor:pointer; font-size:13px; width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .cat-chip button:hover{ background:var(--danger); color:#fff; }
+  .cat-chip-empty{ font-size:12.5px; color:var(--ink-faint); }
+
+  /* search bar */
+  .search-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .search-row input[type="text"]{
+    flex:1 1 160px; padding:10px 12px; border-radius:var(--radius-sm);
+    border:1.5px solid var(--border-strong); font-size:13.5px; background:#fff;
+  }
+  .search-row select{
+    flex:1 1 140px; padding:10px 12px; border-radius:var(--radius-sm);
+    border:1.5px solid var(--border-strong); font-size:13.5px; background:#fff; color:var(--ink);
+  }
+  .search-row input:focus, .search-row select:focus{ outline:2px solid var(--teal-600); outline-offset:1px; border-color:var(--teal-600); }
+  .search-clear{
+    border:1.5px solid var(--border-strong); background:#fff; color:var(--ink-muted);
+    border-radius:var(--radius-sm); padding:0 14px; font-weight:700; font-size:13px; cursor:pointer; display:none;
+  }
+  .search-clear.show{ display:inline-flex; align-items:center; }
+  .search-clear:hover{ background:var(--surface-alt); }
+
   /* transaction list */
   .tx-list{ list-style:none; margin:0; padding:0; max-height:420px; overflow:auto; }
   .tx-list::-webkit-scrollbar{ width:6px; }
@@ -279,10 +318,32 @@
             </div>
           </div>
           <button class="btn-primary" id="addBtn">Simpan transaksi</button>
+
+          <details class="cat-manage">
+            <summary>Kelola kategori</summary>
+            <div class="cat-manage-body">
+              <p class="hint">Kategori baru tersimpan di akunmu dan ikut muncul di semua perangkat. Menghapus kategori tidak menghapus transaksi lama yang sudah pakai kategori itu.</p>
+              <div class="cat-add-row">
+                <input type="text" id="newCatInput" placeholder='mis. "Beasiswa"' />
+                <button type="button" id="addCatBtn">Tambah ke <span id="addCatTypeLabel">Pemasukan</span></button>
+              </div>
+              <div style="margin-bottom:10px; font-size:12px; font-weight:700; color:var(--ink-muted);">Kategori pemasukan tambahan</div>
+              <div class="cat-chip-group" id="customIncomeChips"></div>
+              <div style="margin:14px 0 10px; font-size:12px; font-weight:700; color:var(--ink-muted);">Kategori pengeluaran tambahan</div>
+              <div class="cat-chip-group" id="customExpenseChips"></div>
+            </div>
+          </details>
         </div>
 
         <div class="panel">
           <h2 id="listTitle">Transaksi hari ini</h2>
+          <div class="search-row">
+            <input type="text" id="searchKeyword" placeholder="Cari catatan... (mis. beasiswa)" />
+            <select id="searchCategory">
+              <option value="">Semua kategori</option>
+            </select>
+            <button type="button" class="search-clear" id="searchClearBtn">Hapus pencarian</button>
+          </div>
           <ul class="tx-list" id="txList"></ul>
         </div>
 
@@ -341,7 +402,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot,
-  serverTimestamp, query, orderBy
+  serverTimestamp, query, orderBy, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* -----------------------------------------------------------
@@ -372,14 +433,25 @@ setPersistence(auth, browserLocalPersistence).catch(console.error);
 let currentUser = null;
 let allTx = [];              // semua transaksi milik user, realtime
 let unsubscribeTx = null;
+let unsubscribeProfile = null;
 let period = "day";          // day | month | year
 let refDate = new Date();    // tanggal acuan untuk period yang dipilih
 let mode = "login";          // login | register
+let activeAddType = "income"; // tipe yang sedang aktif di form tambah transaksi
 
-const CATEGORY = {
+const DEFAULT_CATEGORY = {
   income:  ["Gaji", "Bonus", "Hadiah", "Usaha Sampingan", "Lainnya"],
   expense: ["Makanan & Minuman", "Transportasi", "Belanja", "Tagihan", "Kesehatan", "Hiburan", "Pendidikan", "Lainnya"]
 };
+// Kategori tambahan milik akun ini, disimpan di Firestore users/{uid}.customCategories
+let customCategories = { income: [], expense: [] };
+
+function allCategoriesFor(type){
+  // gabung bawaan + custom, tanpa duplikat, urutan: bawaan dulu lalu custom
+  const merged = [...DEFAULT_CATEGORY[type]];
+  customCategories[type].forEach(c => { if (!merged.includes(c)) merged.push(c); });
+  return merged;
+}
 
 /* ===================== HELPERS ===================== */
 const fmtRp = n => "Rp" + Math.round(n).toLocaleString("id-ID");
@@ -452,21 +524,24 @@ el("logoutBtn").addEventListener("click", () => signOut(auth));
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
   if (unsubscribeTx) { unsubscribeTx(); unsubscribeTx = null; }
+  if (unsubscribeProfile) { unsubscribeProfile(); unsubscribeProfile = null; }
   if (user) {
     el("authScreen").style.display = "none";
     el("appScreen").style.display = "block";
     el("authChip").style.display = "flex";
     el("userEmailLabel").textContent = user.email;
     listenToTransactions(user.uid);
+    listenToProfile(user.uid);
   } else {
     el("authScreen").style.display = "block";
     el("appScreen").style.display = "none";
     el("authChip").style.display = "none";
     allTx = [];
+    customCategories = { income: [], expense: [] };
   }
 });
 
-/* ===================== FIRESTORE SYNC ===================== */
+/* ===================== FIRESTORE SYNC — transactions ===================== */
 function listenToTransactions(uid){
   const q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
   unsubscribeTx = onSnapshot(q, (snap) => {
@@ -477,6 +552,28 @@ function listenToTransactions(uid){
   });
 }
 
+/* ===================== FIRESTORE SYNC — kategori custom =====================
+   Disimpan di dokumen users/{uid} (bukan subcollection transactions).
+   Pastikan Firestore Rules mengizinkan baca/tulis dokumen ini juga
+   (lihat README bagian Rules). */
+function listenToProfile(uid){
+  unsubscribeProfile = onSnapshot(doc(db, "users", uid), (snap) => {
+    const data = snap.exists() ? snap.data() : {};
+    customCategories = {
+      income: Array.isArray(data.customCategories?.income) ? data.customCategories.income : [],
+      expense: Array.isArray(data.customCategories?.expense) ? data.customCategories.expense : []
+    };
+    fillCategoryOptions(activeAddType);
+    renderCategoryManager();
+    populateSearchCategoryOptions();
+  }, (err) => console.error(err));
+}
+
+async function saveCustomCategories(){
+  if (!currentUser) return;
+  await setDoc(doc(db, "users", currentUser.uid), { customCategories }, { merge: true });
+}
+
 el("addBtn").addEventListener("click", async () => {
   if (!currentUser) return;
   const date = el("txDate").value || toISODate(new Date());
@@ -484,6 +581,7 @@ el("addBtn").addEventListener("click", async () => {
   const category = el("txCategory").value;
   const note = el("txNote").value.trim();
   const amount = parseFloat(el("txAmount").value);
+  if (!category) { el("txCategory").focus(); return; }
   if (!amount || amount <= 0) { el("txAmount").focus(); return; }
   el("addBtn").disabled = true;
   try {
@@ -508,22 +606,114 @@ async function deleteTx(id){
 /* ===================== FORM SETUP ===================== */
 function fillCategoryOptions(type){
   const sel = el("txCategory");
+  const prevValue = sel.value;
   sel.innerHTML = "";
-  CATEGORY[type].forEach(c => {
+  allCategoriesFor(type).forEach(c => {
     const opt = document.createElement("option");
     opt.value = c; opt.textContent = c;
     sel.appendChild(opt);
   });
+  const addOpt = document.createElement("option");
+  addOpt.value = "__add_new__";
+  addOpt.textContent = "+ Tambah kategori baru...";
+  sel.appendChild(addOpt);
+  // pertahankan pilihan sebelumnya kalau masih ada di daftar baru
+  if (allCategoriesFor(type).includes(prevValue)) sel.value = prevValue;
 }
+
+el("txCategory").addEventListener("change", () => {
+  if (el("txCategory").value === "__add_new__") {
+    const name = prompt(`Nama kategori ${activeAddType === "income" ? "pemasukan" : "pengeluaran"} baru:`);
+    fillCategoryOptions(activeAddType); // reset dulu supaya tidak nyangkut di opsi "+ Tambah..."
+    const trimmed = (name || "").trim();
+    if (!trimmed) return;
+    addCustomCategory(activeAddType, trimmed, true);
+  }
+});
+
+async function addCustomCategory(type, name, selectAfter){
+  if (allCategoriesFor(type).some(c => c.toLowerCase() === name.toLowerCase())) {
+    if (selectAfter) el("txCategory").value = allCategoriesFor(type).find(c => c.toLowerCase() === name.toLowerCase());
+    return;
+  }
+  customCategories[type] = [...customCategories[type], name];
+  await saveCustomCategories();
+  fillCategoryOptions(activeAddType);
+  if (selectAfter && activeAddType === type) el("txCategory").value = name;
+}
+
+async function removeCustomCategory(type, name){
+  if (!confirm(`Hapus kategori "${name}"? Transaksi lama yang sudah pakai kategori ini tidak ikut terhapus.`)) return;
+  customCategories[type] = customCategories[type].filter(c => c !== name);
+  await saveCustomCategories();
+  fillCategoryOptions(activeAddType);
+}
+
+function renderCategoryManager(){
+  el("addCatTypeLabel").textContent = activeAddType === "income" ? "Pemasukan" : "Pengeluaran";
+  const renderChips = (containerId, type) => {
+    const box = el(containerId);
+    box.innerHTML = "";
+    if (customCategories[type].length === 0) {
+      box.innerHTML = `<span class="cat-chip-empty">Belum ada kategori tambahan.</span>`;
+      return;
+    }
+    customCategories[type].forEach(c => {
+      const chip = document.createElement("span");
+      chip.className = "cat-chip";
+      chip.innerHTML = `<span>${escapeHtml(c)}</span><button type="button" title="Hapus">✕</button>`;
+      chip.querySelector("button").addEventListener("click", () => removeCustomCategory(type, c));
+      box.appendChild(chip);
+    });
+  };
+  renderChips("customIncomeChips", "income");
+  renderChips("customExpenseChips", "expense");
+}
+
+el("addCatBtn").addEventListener("click", async () => {
+  const name = el("newCatInput").value.trim();
+  if (!name) { el("newCatInput").focus(); return; }
+  await addCustomCategory(activeAddType, name, false);
+  el("newCatInput").value = "";
+});
+el("newCatInput").addEventListener("keydown", (e) => { if (e.key === "Enter") el("addCatBtn").click(); });
+
 document.querySelectorAll(".type-toggle button").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".type-toggle button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    fillCategoryOptions(btn.dataset.type);
+    activeAddType = btn.dataset.type;
+    fillCategoryOptions(activeAddType);
+    renderCategoryManager();
   });
 });
 fillCategoryOptions("income");
+renderCategoryManager();
 el("txDate").value = toISODate(new Date());
+
+/* ===================== PENCARIAN ===================== */
+function populateSearchCategoryOptions(){
+  const sel = el("searchCategory");
+  const prevValue = sel.value;
+  const known = new Set([...DEFAULT_CATEGORY.income, ...DEFAULT_CATEGORY.expense, ...customCategories.income, ...customCategories.expense, ...allTx.map(t => t.category)]);
+  sel.innerHTML = `<option value="">Semua kategori</option>`;
+  Array.from(known).sort((a,b) => a.localeCompare(b, "id")).forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+  if (known.has(prevValue)) sel.value = prevValue;
+}
+el("searchKeyword").addEventListener("input", render);
+el("searchCategory").addEventListener("change", render);
+el("searchClearBtn").addEventListener("click", () => {
+  el("searchKeyword").value = "";
+  el("searchCategory").value = "";
+  render();
+});
+function isSearchActive(){
+  return el("searchKeyword").value.trim() !== "" || el("searchCategory").value !== "";
+}
 
 /* ===================== PERIOD SWITCH ===================== */
 document.querySelectorAll("#periodSwitch button").forEach(btn => {
@@ -587,8 +777,8 @@ let categoryChart = null;
 let trendChart = null;
 const PALETTE = ["#0D9488","#34D399","#38BDF8","#5EEAD4","#7DD3FC","#A7F3D0","#0EA5A0","#63C9E6"];
 
-function renderCategoryChart(currentTx){
-  const expenseTx = currentTx.filter(t => t.type === "expense");
+function renderCategoryChart(periodTx){
+  const expenseTx = periodTx.filter(t => t.type === "expense");
   const byCat = {};
   expenseTx.forEach(t => { byCat[t.category] = (byCat[t.category]||0) + t.amount; });
   const labels = Object.keys(byCat);
@@ -664,17 +854,14 @@ function renderTrendChart(){
 
 /* ===================== INSIGHT ENGINE (rule-based) =====================
    Analisis ini dihitung langsung di browser dari data kamu sendiri —
-   tanpa mengirim data ke server pihak ketiga mana pun.
-   Lihat README bagian "Analisis AI" jika ingin menyambungkannya ke
-   model AI sungguhan (opsional, butuh API key sendiri). */
-function buildInsights(currentTx, prevTx){
+   tanpa mengirim data ke server pihak ketiga mana pun. */
+function buildInsights(periodTx, prevTx){
   const insights = [];
-  const income = currentTx.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
-  const expense = currentTx.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
-  const prevIncome = prevTx.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
+  const income = periodTx.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
+  const expense = periodTx.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
   const prevExpense = prevTx.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
 
-  if (currentTx.length === 0) {
+  if (periodTx.length === 0) {
     insights.push("Belum ada transaksi di periode ini. Yuk catat jajan atau pemasukan pertamamu.");
     return insights;
   }
@@ -688,7 +875,7 @@ function buildInsights(currentTx, prevTx){
   }
 
   const byCat = {};
-  currentTx.filter(t=>t.type==="expense").forEach(t => { byCat[t.category] = (byCat[t.category]||0)+t.amount; });
+  periodTx.filter(t=>t.type==="expense").forEach(t => { byCat[t.category] = (byCat[t.category]||0)+t.amount; });
   const catEntries = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
   if (catEntries.length > 0 && expense > 0) {
     const [topCat, topVal] = catEntries[0];
@@ -705,11 +892,11 @@ function buildInsights(currentTx, prevTx){
   }
 
   if (period === "month") {
-    const daysPassed = new Set(currentTx.map(t=>t.date)).size;
+    const daysPassed = new Set(periodTx.map(t=>t.date)).size;
     if (daysPassed > 0) insights.push(`Rata-rata pengeluaran per hari yang tercatat adalah ${fmtRp(expense/daysPassed)}.`);
   }
   if (period === "year") {
-    const monthsWithData = new Set(currentTx.map(t=>t.date.slice(0,7))).size;
+    const monthsWithData = new Set(periodTx.map(t=>t.date.slice(0,7))).size;
     if (monthsWithData > 0) insights.push(`Rata-rata pengeluaran per bulan yang tercatat adalah ${fmtRp(expense/monthsWithData)}.`);
   }
 
@@ -725,31 +912,63 @@ function buildInsights(currentTx, prevTx){
 function render(){
   el("curLabel").childNodes[0].nodeValue = periodLabel() + " ";
   const titleWord = period === "day" ? "hari ini" : period === "month" ? "bulan ini" : "tahun ini";
-  el("listTitle").textContent = "Transaksi " + titleWord;
   el("summaryTitle").textContent = "Ringkasan " + titleWord;
 
-  const currentTx = allTx.filter(txInPeriod).sort((a,b) => (a.date < b.date ? 1 : -1));
+  // Data untuk ringkasan, grafik, dan analisis SELALU mengikuti periode yang dipilih.
+  const periodTx = allTx.filter(txInPeriod).sort((a,b) => (a.date < b.date ? 1 : -1));
   const prevTx = previousPeriodTx();
 
-  const income = currentTx.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
-  const expense = currentTx.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
+  const income = periodTx.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
+  const expense = periodTx.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
   el("sumIncome").textContent = fmtRp(income);
   el("sumExpense").textContent = fmtRp(expense);
   el("sumBalance").textContent = fmtRp(income-expense);
 
+  renderCategoryChart(periodTx);
+  renderTrendChart();
+
+  const insightList = el("insightList");
+  insightList.innerHTML = "";
+  buildInsights(periodTx, prevTx).forEach(text => {
+    const li = document.createElement("li");
+    li.textContent = text;
+    insightList.appendChild(li);
+  });
+
+  // Daftar transaksi: kalau pencarian aktif, tampilkan hasil pencarian
+  // dari SEMUA periode. Kalau tidak, tampilkan transaksi periode yang dipilih.
+  const searchActive = isSearchActive();
+  let listTx;
+  if (searchActive) {
+    const keyword = el("searchKeyword").value.trim().toLowerCase();
+    const catFilter = el("searchCategory").value;
+    listTx = allTx.filter(t => {
+      const matchKeyword = !keyword || (t.note && t.note.toLowerCase().includes(keyword)) || t.category.toLowerCase().includes(keyword);
+      const matchCategory = !catFilter || t.category === catFilter;
+      return matchKeyword && matchCategory;
+    }).sort((a,b) => (a.date < b.date ? 1 : -1));
+    el("listTitle").textContent = `Hasil pencarian (${listTx.length})`;
+    el("searchClearBtn").classList.add("show");
+  } else {
+    listTx = periodTx;
+    el("listTitle").textContent = "Transaksi " + titleWord;
+    el("searchClearBtn").classList.remove("show");
+  }
+
   const list = el("txList");
   list.innerHTML = "";
-  if (currentTx.length === 0) {
-    list.innerHTML = `<li class="empty-state">Belum ada transaksi di periode ini.</li>`;
+  if (listTx.length === 0) {
+    list.innerHTML = `<li class="empty-state">${searchActive ? "Tidak ada transaksi yang cocok." : "Belum ada transaksi di periode ini."}</li>`;
   } else {
-    currentTx.forEach(t => {
+    listTx.forEach(t => {
       const li = document.createElement("li");
       li.className = "tx-item";
-      const dateShown = period === "day" ? "" : `<div class="tx-date">${t.date}</div>`;
+      // saat pencarian aktif, selalu tampilkan tanggal karena bisa lintas periode
+      const dateShown = (period === "day" && !searchActive) ? "" : `<div class="tx-date">${t.date}</div>`;
       li.innerHTML = `
         <span class="tx-dot ${t.type}"></span>
         <div class="tx-main">
-          <div class="tx-cat">${t.category}</div>
+          <div class="tx-cat">${escapeHtml(t.category)}</div>
           ${t.note ? `<div class="tx-note">${escapeHtml(t.note)}</div>` : ""}
           ${dateShown}
         </div>
@@ -761,20 +980,11 @@ function render(){
     list.querySelectorAll(".tx-del").forEach(btn => btn.addEventListener("click", () => deleteTx(btn.dataset.id)));
   }
 
-  renderCategoryChart(currentTx);
-  renderTrendChart();
-
-  const insightList = el("insightList");
-  insightList.innerHTML = "";
-  buildInsights(currentTx, prevTx).forEach(text => {
-    const li = document.createElement("li");
-    li.textContent = text;
-    insightList.appendChild(li);
-  });
+  populateSearchCategoryOptions();
 }
 
 function escapeHtml(str){
-  return str.replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  return String(str).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 }
 </script>
 </body>
